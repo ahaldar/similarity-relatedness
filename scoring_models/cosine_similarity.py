@@ -1,6 +1,6 @@
 import numpy as np
-import pyemblib
-from drgriffis.common import log
+from dependencies import pyemblib
+from dependencies.drgriffis.common import log
 
 class CosineSimilarityScorer:
     
