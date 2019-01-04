@@ -2,6 +2,7 @@
 '''
 
 import os
+import sys
 import codecs
 from types import SimpleNamespace
 import configparser
@@ -20,7 +21,7 @@ WS353_REL = 'WS353_Relatedness'
 SL999 = 'SimLex-999'
 RW = 'RareWords'
 
-def assignScores(dataset, scorer, detailed_log=None, ds_name=None):
+def assignScores(dataset, scorer, detailed_log=None, ds_name=None, show_skipped=False):
     paired_scores, skipped = [], 0
     kept_samples, gold, pred = [], [], []
     skipped = 0
@@ -28,6 +29,11 @@ def assignScores(dataset, scorer, detailed_log=None, ds_name=None):
         pred_score = scorer.score(w1, w2)
         if pred_score is None:
             skipped += 1
+            if show_skipped:
+                sys.stderr.write('[SKIPPED] %s%s %s %f\n' % (
+                    ('%s - ' % ds_name) if ds_name else '',
+                    w1, w2, float(gold_score)
+                ))
         else:
             kept_samples.append((w1, w2, gold_score))
             gold.append(gold_score)
@@ -45,7 +51,7 @@ def assignScores(dataset, scorer, detailed_log=None, ds_name=None):
     
     return metrics
 
-def experiment(config, scorer_class, *args, detailed_log=None):
+def experiment(config, scorer_class, *args, detailed_log=None, show_skipped=False):
     (ws_full, ws_sim, ws_rel) = WordSim353.load(config)
     sl = SimLex999.load(config)
     rw = RareWords.load(config)
@@ -65,7 +71,8 @@ def experiment(config, scorer_class, *args, detailed_log=None):
             dat,
             scorer,
             detailed_log=detailed_log,
-            ds_name=lbl
+            ds_name=lbl,
+            show_skipped=show_skipped
         )
 
         results[lbl] = ds_metrics
@@ -94,6 +101,9 @@ if __name__ == '__main__':
         parser.add_option('--detailed-scores', dest='detailed_scoresf',
                 default=None,
                 help='file to write detailed scoring results to')
+        parser.add_option('--show-skipped', dest='show_skipped',
+                action='store_true', default=False,
+                help='write skipped samples to stderr')
         parser.add_option('-l', '--logfile', dest='logfile',
                 help='name of file to write log contents to (empty for stdout)',
                 default=None)
@@ -130,7 +140,8 @@ if __name__ == '__main__':
         CosineSimilarityScorer,
         embf,
         options.emb_mode,
-        detailed_log=detailed_log
+        detailed_log=detailed_log,
+        show_skipped=options.show_skipped
     )
 
     if detailed_log:
